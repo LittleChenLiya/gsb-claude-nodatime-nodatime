@@ -915,6 +915,95 @@ namespace NodaTime
             return new Period(this.Years, this.Months, 0 /* weeks */, days, hours, minutes, seconds, milliseconds, 0 /* ticks */, nanoseconds);
         }
 
+        /// <summary>
+        /// Resolves this period into a number of whole days and an exact time portion, using the
+        /// given start date and ISO calendar system to determine the actual length of any months
+        /// in the period.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Unlike <see cref="Normalize"/>, which never converts months, this method converts months
+        /// into the actual number of days between the start date and the real end date obtained by
+        /// adding the months to it in the given calendar - a fixed length such as 30 days is never
+        /// assumed. Weeks and days are added to that total, and hours, minutes and smaller units
+        /// are always converted exactly into <see cref="PeriodResolution.Time"/>, whether or not a
+        /// start date is provided.
+        /// </para>
+        /// <para>
+        /// If the period contains months but <paramref name="start"/> is null, the months cannot be
+        /// resolved: the result is pending (<see cref="PeriodResolution.IsResolved"/> is
+        /// <see langword="false"/>) and <see cref="PeriodResolution.Days"/> only reflects the
+        /// week/day portion of the period.
+        /// </para>
+        /// <para>
+        /// Only the ISO calendar is supported by this method, and periods containing years cannot
+        /// be resolved. No new strategy is applied to periods mixing positive and negative units:
+        /// each unit is simply converted as described above.
+        /// </para>
+        /// </remarks>
+        /// <example>
+        /// <code>
+        /// // Example 1: one month from January 31st 2026 resolves to 28 days,
+        /// // as the real end date is February 28th 2026.
+        /// Period.FromMonths(1).Resolve(new LocalDate(2026, 1, 31)).Days == 28
+        /// // Example 2: the same period from March 31st 2026 resolves to 30 days,
+        /// // as the real end date is April 30th 2026.
+        /// Period.FromMonths(1).Resolve(new LocalDate(2026, 3, 31)).Days == 30
+        /// // Example 3: without a start date, a month-based period is pending (unresolved).
+        /// Period.FromMonths(1).Resolve(null).IsResolved == false
+        /// </code>
+        /// </example>
+        /// <param name="start">The start date to resolve any months against, or null if no start
+        /// date is available. The date is interpreted in <paramref name="calendar"/>.</param>
+        /// <param name="calendar">The calendar system to resolve months in. This must be
+        /// <see cref="CalendarSystem.Iso"/>; if null, the ISO calendar is used.</param>
+        /// <exception cref="ArgumentException"><paramref name="calendar"/> is not the ISO calendar.</exception>
+        /// <exception cref="InvalidOperationException">The period contains years, which are not
+        /// supported by this method.</exception>
+        /// <returns>The resolution of this period.</returns>
+        /// <seealso cref="PeriodResolution"/>
+        /// <seealso cref="Normalize"/>
+        [Pure]
+        public PeriodResolution Resolve(LocalDate? start, CalendarSystem? calendar = null)
+        {
+            if (Years != 0)
+            {
+                throw new InvalidOperationException("Cannot resolve a period containing years; only months, weeks, days and time units are supported.");
+            }
+            calendar ??= CalendarSystem.Iso;
+            Preconditions.CheckArgument(ReferenceEquals(calendar, CalendarSystem.Iso), nameof(calendar),
+                "Only the ISO calendar is supported.");
+
+            long days = Weeks * 7L + Days;
+            bool resolved = true;
+            if (Months != 0)
+            {
+                if (start is null)
+                {
+                    // No start date: the length of the months is unknown, so the
+                    // resolution is pending; only the week/day portion is counted.
+                    resolved = false;
+                }
+                else
+                {
+                    // Convert months to days using the real end date in the given calendar.
+                    LocalDate startDate = start.Value.WithCalendar(calendar);
+                    LocalDate end = startDate.PlusMonths(Months);
+                    days += Between(startDate, end, PeriodUnits.Days).Days;
+                }
+            }
+
+            // Hours, minutes and smaller units convert exactly, with no reference date.
+            long timeNanoseconds = Nanoseconds +
+                Ticks * NanosecondsPerTick +
+                Milliseconds * NanosecondsPerMillisecond +
+                Seconds * NanosecondsPerSecond +
+                Minutes * NanosecondsPerMinute +
+                Hours * NanosecondsPerHour;
+
+            return new PeriodResolution(resolved, days, Duration.FromNanoseconds(timeNanoseconds));
+        }
+
         #region Object overrides
 
         /// <summary>
