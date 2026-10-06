@@ -194,5 +194,36 @@ namespace NodaTime.Demo
             Assert.False(oneDayAsPeriod.HasTimeComponent);
             Assert.AreEqual(Duration.FromDays(1), actual);
         }
+
+        [Test]
+        public void Resolve_OneMonthFromStartDate()
+        {
+            Period oneMonth = Period.FromMonths(1);
+            // The number of days in "one month" depends on the actual end date.
+            var fromJanuary31st = Snippet.For(oneMonth.Resolve(CalendarSystem.Iso, new LocalDate(2026, 1, 31)));
+            Assert.IsTrue(fromJanuary31st.IsResolved);
+            Assert.AreEqual(Period.FromDays(28), fromJanuary31st.Period);
+
+            var fromJuly31st = oneMonth.Resolve(CalendarSystem.Iso, new LocalDate(2026, 7, 31));
+            Assert.AreEqual(Period.FromDays(31), fromJuly31st.Period);
+        }
+
+        [Test]
+        public void Resolve_MonthWithoutStartDateIsUnresolved()
+        {
+            Period oneMonth = Period.FromMonths(1);
+            var resolution = Snippet.For(oneMonth.Resolve(CalendarSystem.Iso, null));
+            Assert.IsFalse(resolution.IsResolved);
+            Assert.IsNull(resolution.Period);
+        }
+
+        [Test]
+        public void Resolve_HoursAndMinutesAreExact()
+        {
+            Period period = new PeriodBuilder { Hours = 25, Minutes = 90 }.Build();
+            var resolution = Snippet.For(period.Resolve(CalendarSystem.Iso, null));
+            Assert.IsTrue(resolution.IsResolved);
+            Assert.AreEqual(new PeriodBuilder { Days = 1, Hours = 2, Minutes = 30 }.Build(), resolution.Period);
+        }
     }
 }

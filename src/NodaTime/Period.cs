@@ -915,6 +915,75 @@ namespace NodaTime
             return new Period(this.Years, this.Months, 0 /* weeks */, days, hours, minutes, seconds, milliseconds, 0 /* ticks */, nanoseconds);
         }
 
+        /// <summary>
+        /// Resolves this period against the given calendar system and an optional start date, converting
+        /// months to a concrete number of days based on the actual end date, and normalizing the remaining
+        /// units as per <see cref="Normalize()"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Unlike <see cref="Normalize()"/>, which leaves months unchanged, this method converts months to
+        /// days by adding them to <paramref name="start"/> and counting the actual days to the resulting
+        /// end date - so "1 month" resolves to 28 days from January 31st 2026 (ending on February 28th),
+        /// but 31 days from July 31st 2026 (ending on August 31st). It never assumes a fixed month length
+        /// such as 30 days.
+        /// </para>
+        /// <para>
+        /// If this period has a non-zero <see cref="Months"/> value but <paramref name="start"/> is
+        /// <see langword="null"/>, the result is <see cref="PeriodResolution.Unresolved"/>, as the length
+        /// of a month cannot be determined without a start date. Periods containing only day/time units
+        /// (such as hours and minutes) are always resolved precisely, with or without a start date.
+        /// </para>
+        /// <para>
+        /// Years are not handled by this method and are left unchanged in the resolved period, as are any
+        /// aspects of negative or mixed-sign units beyond the normalization already performed by
+        /// <see cref="Normalize()"/>. Only the ISO calendar system is supported.
+        /// </para>
+        /// </remarks>
+        /// <param name="calendar">The calendar system to resolve against. Only the ISO calendar system is
+        /// currently supported.</param>
+        /// <param name="start">The start date used to determine the actual length of any months, or
+        /// <see langword="null"/> if no start date is available.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="calendar"/> is null.</exception>
+        /// <exception cref="ArgumentException"><paramref name="calendar"/> is not the ISO calendar system.</exception>
+        /// <exception cref="OverflowException">The resolved period contains more than
+        /// <see cref="Int64.MaxValue"/> nanoseconds when the combined months/weeks/days/time portions are
+        /// considered. This is over 292 years, so unlikely to be a problem in normal usage.</exception>
+        /// <returns>A <see cref="PeriodResolution"/> indicating whether the period could be resolved, and
+        /// if so, the resolved period.</returns>
+        /// <seealso cref="Normalize()"/>
+        [Pure]
+        public PeriodResolution Resolve(CalendarSystem calendar, LocalDate? start)
+        {
+            Preconditions.CheckNotNull(calendar, nameof(calendar));
+            Preconditions.CheckArgument(ReferenceEquals(calendar, CalendarSystem.Iso), nameof(calendar),
+                "Only the ISO calendar system is supported when resolving a period.");
+
+            long monthDays = 0;
+            if (Months != 0)
+            {
+                if (start is null)
+                {
+                    return PeriodResolution.Unresolved;
+                }
+                // Determine the actual number of days in the months, based on the real end date.
+                LocalDate isoStart = start.Value.WithCalendar(calendar);
+                LocalDate end = isoStart.PlusMonths(Months);
+                monthDays = Between(isoStart, end, PeriodUnits.Days).Days;
+            }
+
+            long totalNanoseconds = TotalNanoseconds + monthDays * NanosecondsPerDay;
+            int days = (int) (totalNanoseconds / NanosecondsPerDay);
+            long hours = (totalNanoseconds / NanosecondsPerHour) % HoursPerDay;
+            long minutes = (totalNanoseconds / NanosecondsPerMinute) % MinutesPerHour;
+            long seconds = (totalNanoseconds / NanosecondsPerSecond) % SecondsPerMinute;
+            long milliseconds = (totalNanoseconds / NanosecondsPerMillisecond) % MillisecondsPerSecond;
+            long nanoseconds = totalNanoseconds % NanosecondsPerMillisecond;
+
+            return new PeriodResolution(
+                new Period(this.Years, 0 /* months */, 0 /* weeks */, days, hours, minutes, seconds, milliseconds, 0 /* ticks */, nanoseconds));
+        }
+
         #region Object overrides
 
         /// <summary>

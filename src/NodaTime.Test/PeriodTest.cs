@@ -1147,6 +1147,82 @@ namespace NodaTime.Test
             Assert.Throws<OverflowException>(() => (p1 + p2).GetHashCode());
         }
 
+        [Test]
+        public void Resolve_OneMonthFromEndOfJanuary_UsesActualEndDate()
+        {
+            var period = Period.FromMonths(1);
+            var resolution = period.Resolve(CalendarSystem.Iso, new LocalDate(2026, 1, 31));
+            Assert.IsTrue(resolution.IsResolved);
+            // January 31st 2026 + 1 month = February 28th 2026, which is 28 days (not a fixed 30).
+            Assert.AreEqual(Period.FromDays(28), resolution.Period);
+        }
+
+        [Test]
+        public void Resolve_OneMonthFromOtherStart_UsesActualEndDate()
+        {
+            var period = Period.FromMonths(1);
+            // July 31st 2026 + 1 month = August 31st 2026, which is 31 days.
+            var julyResolution = period.Resolve(CalendarSystem.Iso, new LocalDate(2026, 7, 31));
+            Assert.IsTrue(julyResolution.IsResolved);
+            Assert.AreEqual(Period.FromDays(31), julyResolution.Period);
+            // March 31st 2026 + 1 month = April 30th 2026, which is 30 days.
+            var marchResolution = period.Resolve(CalendarSystem.Iso, new LocalDate(2026, 3, 31));
+            Assert.IsTrue(marchResolution.IsResolved);
+            Assert.AreEqual(Period.FromDays(30), marchResolution.Period);
+        }
+
+        [Test]
+        public void Resolve_MonthsWithoutStart_Unresolved()
+        {
+            var resolution = Period.FromMonths(1).Resolve(CalendarSystem.Iso, null);
+            Assert.IsFalse(resolution.IsResolved);
+            Assert.IsNull(resolution.Period);
+            Assert.IsFalse(PeriodResolution.Unresolved.IsResolved);
+        }
+
+        [Test]
+        public void Resolve_HoursAndMinutes_PreciseWithoutStart()
+        {
+            var original = new PeriodBuilder { Hours = 25, Minutes = 90 }.Build();
+            var resolution = original.Resolve(CalendarSystem.Iso, null);
+            Assert.IsTrue(resolution.IsResolved);
+            var expected = new PeriodBuilder { Days = 1, Hours = 2, Minutes = 30 }.Build();
+            Assert.AreEqual(expected, resolution.Period);
+        }
+
+        [Test]
+        public void Resolve_MonthsAndTimeWithStart()
+        {
+            var original = new PeriodBuilder { Months = 1, Hours = 30 }.Build();
+            var resolution = original.Resolve(CalendarSystem.Iso, new LocalDate(2026, 1, 31));
+            Assert.IsTrue(resolution.IsResolved);
+            // 28 days for the month, plus 30 hours = 1 day and 6 hours.
+            var expected = new PeriodBuilder { Days = 29, Hours = 6 }.Build();
+            Assert.AreEqual(expected, resolution.Period);
+        }
+
+        [Test]
+        public void Resolve_YearsAreLeftUnchanged()
+        {
+            var original = new PeriodBuilder { Years = 2, Days = 3 }.Build();
+            var resolution = original.Resolve(CalendarSystem.Iso, null);
+            Assert.IsTrue(resolution.IsResolved);
+            Assert.AreEqual(original, resolution.Period);
+        }
+
+        [Test]
+        public void Resolve_NullCalendar_Throws()
+        {
+            Assert.Throws<ArgumentNullException>(() => Period.FromDays(1).Resolve(null!, null));
+        }
+
+        [Test]
+        public void Resolve_NonIsoCalendar_Throws()
+        {
+            Assert.Throws<ArgumentException>(
+                () => Period.FromMonths(1).Resolve(CalendarSystem.Coptic, new LocalDate(2026, 1, 31)));
+        }
+
         /// <summary>
         /// Just a simple way of parsing a period string. It's a more compact period representation.
         /// </summary>
