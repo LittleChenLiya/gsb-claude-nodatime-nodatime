@@ -29,6 +29,7 @@ namespace NodaTime.Text
         internal const string Hour12PatternNotSupported = "The 'h' pattern flag (12 hour format) is not supported by the {0} type.";
         internal const string InconsistentDayOfWeekTextValue = "The specified day of the week does not matched the computed value.";
         internal const string InconsistentMonthTextValue = "The month values specified as text and numbers are inconsistent.";
+        internal const string InconsistentOffsetValues = "The offset values in the text are inconsistent with each other or with the offset specified for the pattern.";
         internal const string InconsistentValues2 = "The individual values for the fields '{0}' and '{1}' created an inconsistency in the {2} type.";
         internal const string InvalidEmbeddedPatternType = "The type of embedded pattern is not supported for this type.";
         internal const string InvalidHour24 = "24 is only valid as an hour number when the units smaller than hours are all 0.";

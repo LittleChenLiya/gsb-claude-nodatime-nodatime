@@ -262,6 +262,13 @@ namespace NodaTime.Text
         internal static ParseResult<T> InconsistentDayOfWeekTextValue(string text) => ForInvalidValuePostParse(text, TextErrorMessages.InconsistentDayOfWeekTextValue);
 
         /// <summary>
+        /// The offset values specified in the text were inconsistent with each other or with the
+        /// offset specified for the pattern. The cursor is positioned at the offending offset field.
+        /// </summary>
+        internal static ParseResult<T> InconsistentOffsetValues(ValueCursor cursor) =>
+            ForInvalidValue(cursor, TextErrorMessages.InconsistentOffsetValues);
+
+        /// <summary>
         /// We'd expected to get to the end of the string now, but we haven't.
         /// </summary>
         internal static ParseResult<T> ExpectedEndOfString(ValueCursor cursor) => ForInvalidValue(cursor, TextErrorMessages.ExpectedEndOfString);

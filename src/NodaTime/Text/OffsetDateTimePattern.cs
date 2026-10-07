@@ -6,6 +6,7 @@ using NodaTime.Annotations;
 using NodaTime.Globalization;
 using NodaTime.Text.Patterns;
 using NodaTime.Utility;
+using System;
 using System.Globalization;
 using System.Text;
 
@@ -213,6 +214,47 @@ namespace NodaTime.Text
         /// <exception cref="InvalidPatternException">The pattern text was invalid.</exception>
         public static OffsetDateTimePattern CreateWithCurrentCulture(string patternText) =>
             Create(patternText, NodaFormatInfo.CurrentInfo, DefaultTemplateValue, LocalDatePattern.DefaultTwoDigitYearMax);
+
+        /// <summary>
+        /// Creates a strict pattern which combines local date/time fields parsed according to
+        /// <paramref name="patternText"/> with the specified <paramref name="offset"/>, producing
+        /// <see cref="OffsetDateTime"/> values without ever consulting the system time zone.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// The pattern text is a custom pattern as for <see cref="Create(string, CultureInfo, OffsetDateTime)"/>
+        /// (standard single-character patterns are not supported here), and may contain zero, one or two
+        /// offset (<c>o&lt;...&gt;</c>) fields:
+        /// </para>
+        /// <list type="bullet">
+        /// <item><description>If the text declares no offset, the specified offset is applied to the
+        /// parsed local date/time. The offset is never taken from the template value or the system
+        /// time zone.</description></item>
+        /// <item><description>If the text declares an offset (in one or two fields), every declared
+        /// offset must be equal to the specified offset - so two offset fields declaring conflicting
+        /// offsets are rejected. The parse failure is positioned at the offending offset field.</description></item>
+        /// </list>
+        /// <para>
+        /// Time zone names or abbreviations are never treated as offsets: the <c>z</c> pattern
+        /// character is not supported, and text containing a zone id where an offset is expected
+        /// will fail to parse. The culture is used for the local date/time fields exactly as in
+        /// <see cref="Create(string, CultureInfo, OffsetDateTime)"/>; offset fields keep their
+        /// explicit, culture-independent meaning.
+        /// </para>
+        /// </remarks>
+        /// <param name="patternText">Custom pattern text to create the pattern for.</param>
+        /// <param name="cultureInfo">The culture to use in the pattern.</param>
+        /// <param name="offset">The offset to apply to parsed values, and to validate declared offsets against.</param>
+        /// <returns>A strict pattern for parsing and formatting offset date/times.</returns>
+        /// <exception cref="ArgumentNullException"><paramref name="patternText"/> or <paramref name="cultureInfo"/> is null.</exception>
+        /// <exception cref="InvalidPatternException">The pattern text was invalid.</exception>
+        public static IPattern<OffsetDateTime> CreateStrict(string patternText, [ValidatedNotNull] CultureInfo cultureInfo, Offset offset)
+        {
+            Preconditions.CheckNotNull(patternText, nameof(patternText));
+            var formatInfo = NodaFormatInfo.GetFormatInfo(Preconditions.CheckNotNull(cultureInfo, nameof(cultureInfo)));
+            return new OffsetDateTimePatternParser(DefaultTemplateValue, LocalDatePattern.DefaultTwoDigitYearMax, offset)
+                .ParsePattern(patternText, formatInfo);
+        }
 
         /// <summary>
         /// Creates a pattern for the same original localization information as this pattern, but with the specified
