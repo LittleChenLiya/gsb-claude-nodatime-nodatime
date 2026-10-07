@@ -32,6 +32,7 @@ namespace NodaTime.Text
         internal const string InconsistentValues2 = "The individual values for the fields '{0}' and '{1}' created an inconsistency in the {2} type.";
         internal const string InvalidEmbeddedPatternType = "The type of embedded pattern is not supported for this type.";
         internal const string InvalidHour24 = "24 is only valid as an hour number when the units smaller than hours are all 0.";
+        internal const string ConflictingOffset = "The offset declared in the value ('{0}') conflicts with the expected offset ('{1}').";
         internal const string InvalidOffset = "The specified offset is invalid for the given date/time.";
         internal const string InvalidRepeatCount = "The number of consecutive copies of the pattern character \"{0}\" in the format string ({1}) is invalid.";
         internal const string InvalidUnitSpecifier = "The period unit specifier '{0}' is invalid.";

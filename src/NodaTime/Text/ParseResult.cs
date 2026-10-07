@@ -279,6 +279,13 @@ namespace NodaTime.Text
 
         internal static ParseResult<T> InvalidOffset(string text) => ForInvalidValuePostParse(text, TextErrorMessages.InvalidOffset);
 
+        /// <summary>
+        /// The offset explicitly declared by the value conflicts with the offset expected
+        /// by the strict pattern being used.
+        /// </summary>
+        internal static ParseResult<T> ConflictingOffset(ValueCursor cursor, Offset declaredOffset, Offset expectedOffset) =>
+            ForInvalidValue(cursor, TextErrorMessages.ConflictingOffset, declaredOffset, expectedOffset);
+
         internal static ParseResult<T> SkippedLocalTime(string text) => ForInvalidValuePostParse(text, TextErrorMessages.SkippedLocalTime);
 
         internal static ParseResult<T> AmbiguousLocalTime(string text) => ForInvalidValuePostParse(text, TextErrorMessages.AmbiguousLocalTime);
