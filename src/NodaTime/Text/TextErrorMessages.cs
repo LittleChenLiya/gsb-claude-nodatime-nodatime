@@ -64,6 +64,11 @@ namespace NodaTime.Text
         internal const string TimeSeparatorMismatch = "The value string does not match a time separator in the format string.";
         internal const string UnexpectedNegative = "The value string includes a negative value where only a non-negative one is allowed.";
         internal const string UnknownStandardFormat = "The standard format \"{0}\" is not valid for the {1} type. If the pattern was intended to be a custom format, escape it with a percent sign: \"%{0}\".";
+        internal const string IntervalEndBeforeStart = "The interval end is earlier than the interval start.";
+        internal const string MissingEndEndpoint = "The end endpoint is missing.";
+        internal const string MissingSeparator = "The value string does not contain the '/' separator between the interval start and end.";
+        internal const string MissingStartEndpoint = "The start endpoint is missing.";
+        internal const string RepeatedSeparator = "The value string contains more than one '/' separator.";
         internal const string UnparsableValue = "{0} Value being parsed: '{1}'. (^ indicates error position.)";
         internal const string UnparsableValuePostParse = "{0} Value being parsed: '{1}'.";
         internal const string UnquotedLiteral = "The character {0} is not a format specifier for this pattern type, and should be quoted to act as a literal. Note that each type of pattern has its own set of valid format specifiers.";

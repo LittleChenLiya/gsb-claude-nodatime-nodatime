@@ -2,6 +2,7 @@
 // Use of this source code is governed by the Apache License 2.0,
 // as found in the LICENSE.txt file.
 
+using NodaTime.Text;
 using NUnit.Framework;
 
 namespace NodaTime.Demo
@@ -68,6 +69,31 @@ namespace NodaTime.Demo
             Interval interval = new Interval(start, end);
             var stringRepresentation = Snippet.For(interval.ToString());
             Assert.AreEqual("2019-01-02T10:11:12Z/2020-02-03T12:13:14Z", stringRepresentation);
+        }
+
+        [Test]
+        public void Pattern_MissingEndpointsUseAnExplicitPolicyAndNeverUseNow()
+        {
+            // The default pattern accepts concrete instants and explicit infinity, but rejects
+            // missing endpoints rather than filling them in with "now".
+            Assert.IsTrue(IntervalPattern.ExtendedIso.Parse("StartOfTime/EndOfTime").Success);
+            Assert.IsFalse(IntervalPattern.ExtendedIso.Parse("/").Success);
+
+            // Missing endpoints are resolved only with a caller-supplied policy, e.g. "treat missing as infinite".
+            var pattern = IntervalPattern.Create(MissingEndpointPolicy.TreatAsInfinite);
+            Interval interval = Snippet.For(pattern.Parse("/").GetValueOrThrow());
+            Assert.IsFalse(interval.HasStart);
+            Assert.IsFalse(interval.HasEnd);
+        }
+
+        [Test]
+        public void Pattern_ThreeStateEndpointsRoundTrip()
+        {
+            // ParseEndpoints keeps the missing/infinite/instant tri-state distinct.
+            var endpoints = IntervalPattern.ExtendedIso.ParseEndpoints("/").GetValueOrThrow();
+            Assert.AreEqual(IntervalEndpointState.Missing, endpoints.Start.State);
+            Assert.AreEqual(IntervalEndpointState.Missing, endpoints.End.State);
+            Assert.AreEqual("/", IntervalPattern.ExtendedIso.Format(endpoints));
         }
     }
 }
